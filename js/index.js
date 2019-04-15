@@ -1,89 +1,54 @@
+var canvas = document.getElementById("canvas");
+		var ctx = canvas.getContext("2d");
 
-/*
-Inspired by https://dribbble.com/shots/2004657-Alarm-Clock-concept
- */
+		ctx.strokeStyle = '#00ffff';
+		ctx.lineWidth = 17;
+		ctx.shadowBlur= 15;
+		ctx.shadowColor = '#00ffff'
 
-(function() {
-  var describeArc, polarToCartesian, setCaptions;
+		function degToRad(degree){
+			var factor = Math.PI/180;
+			return degree*factor;
+		}
 
-  polarToCartesian = function(centerX, centerY, radius, angleInDegrees) {
-    var angleInRadians;
-    angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-    return {
-      x: centerX + radius * Math.cos(angleInRadians),
-      y: centerY + radius * Math.sin(angleInRadians)
-    };
-  };
+		function renderTime(){
+			var now = new Date();
+			var today = now.toDateString();
+			var time = now.toLocaleTimeString();
+			var hrs = now.getHours();
+			var min = now.getMinutes();
+			var sec = now.getSeconds();
+			var mil = now.getMilliseconds();
+			var smoothsec = sec+(mil/1000);
+      var smoothmin = min+(smoothsec/60);
 
-  describeArc = function(x, y, radius, startAngle, endAngle) {
-    var arcSweep, end, start;
-    start = polarToCartesian(x, y, radius, endAngle);
-    end = polarToCartesian(x, y, radius, startAngle);
-    arcSweep = endAngle - startAngle <= 180 ? '0' : '1';
-    return ['M', start.x, start.y, 'A', radius, radius, 0, arcSweep, 0, end.x, end.y].join(' ');
-  };
+			//Background
+			gradient = ctx.createRadialGradient(250, 250, 5, 250, 250, 300);
+			gradient.addColorStop(0, "#03303a");
+			gradient.addColorStop(1, "black");
+			ctx.fillStyle = gradient;
+			//ctx.fillStyle = 'rgba(00 ,00 , 00, 1)';
+			ctx.fillRect(0, 0, 500, 500);
+			//Hours
+			ctx.beginPath();
+			ctx.arc(250,250,200, degToRad(270), degToRad((hrs*30)-90));
+			ctx.stroke();
+			//Minutes
+			ctx.beginPath();
+			ctx.arc(250,250,170, degToRad(270), degToRad((smoothmin*6)-90));
+			ctx.stroke();
+			//Seconds
+			ctx.beginPath();
+			ctx.arc(250,250,140, degToRad(270), degToRad((smoothsec*6)-90));
+			ctx.stroke();
+			//Date
+			ctx.font = "25px Helvetica";
+			ctx.fillStyle = 'rgba(00, 255, 255, 1)'
+			ctx.fillText(today, 175, 250);
+			//Time
+			ctx.font = "25px Helvetica Bold";
+			ctx.fillStyle = 'rgba(00, 255, 255, 1)';
+			ctx.fillText(time+":"+mil, 175, 280);
 
-  setCaptions = function() {
-    var dot, hour, hourArc, minArc, minute, now, pos;
-    now = new Date();
-    hour = now.getHours() % 12;
-    minute = now.getMinutes();
-    hourArc = (hour * 60 + minute) / (12 * 60) * 360;
-    minArc = minute / 60 * 360;
-    $('.clockArc.hour').attr('d', describeArc(500, 240, 150, 0, hourArc));
-    $('.clockArc.minute').attr('d', describeArc(500, 240, 170, 0, minArc));
-    $('.clockDot.hour').attr('d', describeArc(500, 240, 150, hourArc - 3, hourArc));
-    $('.clockDot.minute').attr('d', describeArc(500, 240, 170, minArc - 1, minArc));
-    dot = $(".clockDot.hour");
-    pos = polarToCartesian(500, 240, 150, hourArc);
-    dot.attr("cx", pos.x);
-    dot.attr("cy", pos.y);
-    dot = $(".clockDot.minute");
-    pos = polarToCartesian(500, 240, 170, minArc);
-    dot.attr("cx", pos.x);
-    dot.attr("cy", pos.y);
-    return $('#time').text(moment().format('H:mm'));
-  };
-
-  $('#day').text(moment().format('dddd'));
-
-  $('#date').text(moment().format('MMMM D'));
-
-  setCaptions();
-
-  setInterval(function() {
-    return setCaptions();
-  }, 10 * 1000);
-
-  $(function() {
-    TweenMax.staggerFrom(".clockArc", .5, {
-      drawSVG: 0,
-      ease: Power3.easeOut
-    }, 0.3);
-    TweenMax.from("#time", 1.0, {
-      attr: {
-        y: 350
-      },
-      opacity: 0,
-      ease: Power3.easeOut,
-      delay: 0.5
-    });
-    TweenMax.from(".dayText", 1.0, {
-      attr: {
-        y: 310
-      },
-      opacity: 0,
-      delay: 1.0,
-      ease: Power3.easeOut
-    });
-    return TweenMax.from(".dateText", 1.0, {
-      attr: {
-        y: 350
-      },
-      opacity: 0,
-      delay: 1.5,
-      ease: Power3.easeOut
-    });
-  });
-
-}).call(this);
+		}
+		setInterval(renderTime, 40);
