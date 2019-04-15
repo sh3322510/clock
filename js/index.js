@@ -1,121 +1,89 @@
-var s = Snap(document.getElementById("clock"));
 
-		var seconds = s.select("#seconds"),
-		    minutes = s.select("#minutes"),
-		    hours   = s.select("#hours"),
-		    rim     = s.select("#rim"), 
-		    face    = {
-		      elem: s.select("#face"),
-		      cx: s.select("#face").getBBox().cx,
-		      cy: s.select("#face").getBBox().cy,
-		    },
-		    angle   = 0,
-		    easing = function(a) {
-		      return a==!!a?a:Math.pow(4,-10*a)*Math.sin((a-.075)*2*Math.PI/.3)+1;
-		    };
+/*
+Inspired by https://dribbble.com/shots/2004657-Alarm-Clock-concept
+ */
 
-		var sshadow = seconds.clone(),
-			mshadow = minutes.clone(),
-			hshadow = hours.clone(),
-			rshadow = rim.clone(),
-			shadows = [sshadow, mshadow, hshadow];
+(function() {
+  var describeArc, polarToCartesian, setCaptions;
 
-		//Insert shadows before their respective opaque pals
-		seconds.before(sshadow);
-		minutes.before(mshadow);
-		hours.before(hshadow);
-		rim.before(rshadow);
+  polarToCartesian = function(centerX, centerY, radius, angleInDegrees) {
+    var angleInRadians;
+    angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
+    return {
+      x: centerX + radius * Math.cos(angleInRadians),
+      y: centerY + radius * Math.sin(angleInRadians)
+    };
+  };
 
-		//Create a filter to make a blurry black version of a thing
-		var filter = Snap.filter.blur(0.1) + Snap.filter.brightness(0);
+  describeArc = function(x, y, radius, startAngle, endAngle) {
+    var arcSweep, end, start;
+    start = polarToCartesian(x, y, radius, endAngle);
+    end = polarToCartesian(x, y, radius, startAngle);
+    arcSweep = endAngle - startAngle <= 180 ? '0' : '1';
+    return ['M', start.x, start.y, 'A', radius, radius, 0, arcSweep, 0, end.x, end.y].join(' ');
+  };
 
-		//Add the filter, shift and opacity to each of the shadows
-		shadows.forEach(function(el){
-			el.attr({
-				transform: "translate(0, 2)",
-				opacity: 0.2,
-				filter: s.filter(filter)
-			});
-		})
+  setCaptions = function() {
+    var dot, hour, hourArc, minArc, minute, now, pos;
+    now = new Date();
+    hour = now.getHours() % 12;
+    minute = now.getMinutes();
+    hourArc = (hour * 60 + minute) / (12 * 60) * 360;
+    minArc = minute / 60 * 360;
+    $('.clockArc.hour').attr('d', describeArc(500, 240, 150, 0, hourArc));
+    $('.clockArc.minute').attr('d', describeArc(500, 240, 170, 0, minArc));
+    $('.clockDot.hour').attr('d', describeArc(500, 240, 150, hourArc - 3, hourArc));
+    $('.clockDot.minute').attr('d', describeArc(500, 240, 170, minArc - 1, minArc));
+    dot = $(".clockDot.hour");
+    pos = polarToCartesian(500, 240, 150, hourArc);
+    dot.attr("cx", pos.x);
+    dot.attr("cy", pos.y);
+    dot = $(".clockDot.minute");
+    pos = polarToCartesian(500, 240, 170, minArc);
+    dot.attr("cx", pos.x);
+    dot.attr("cy", pos.y);
+    return $('#time').text(moment().format('H:mm'));
+  };
 
-		rshadow.attr({
-			transform: "translate(0, 8) ",
-      opacity: 0.5,
-			filter: s.filter(Snap.filter.blur(0, 8)+Snap.filter.brightness(0)),
-		})
+  $('#day').text(moment().format('dddd'));
 
-		function update() {
-		  var time = new Date();
-		  setHours(time);
-		  setMinutes(time);
-		  setSeconds(time);
-		}
+  $('#date').text(moment().format('MMMM D'));
 
-		function setHours(t) {
-		  var hour = t.getHours();
-		  hour %= 12;
-		  hour += Math.floor(t.getMinutes()/10)/6;
-		  var angle = hour*360/12;
-		  hours.animate(
-		    {transform: "rotate("+angle+" 244 251)"},
-		    100,
-		    mina.linear,
-		    function(){
-		      if (angle === 360){
-		        hours.attr({transform: "rotate("+0+" "+face.cx+" "+face.cy+")"});
-		        hshadow.attr({transform: "translate(0, 2) rotate("+0+" "+face.cx+" "+face.cy+2+")"});
-		      }
-		    }
-		  );
-		  hshadow.animate(
-		    {transform: "translate(0, 2) rotate("+angle+" "+face.cx+" "+face.cy+2+")"},
-		    100,
-		    mina.linear
-		  );
-		}
-		function setMinutes(t) {
-		  var minute = t.getMinutes();
-		  minute %= 60;
-		  minute += Math.floor(t.getSeconds()/10)/6;
-		  var angle = minute*360/60;
-		  minutes.animate(
-		    {transform: "rotate("+angle+" "+face.cx+" "+face.cy+")"},
-		    100,
-		    mina.linear,
-		    function(){
-		      if (angle === 360){
-		        minutes.attr({transform: "rotate("+0+" "+face.cx+" "+face.cy+")"});
-		        mshadow.attr({transform: "translate(0, 2) rotate("+0+" "+face.cx+" "+face.cy+2+")"});
-		      }
-		    }
-		  );
-		  mshadow.animate(
-		    {transform: "translate(0, 2) rotate("+angle+" "+face.cx+" "+face.cy+2+")"},
-		    100,
-		    mina.linear
-		  );
-		}
-		function setSeconds(t) {
-		  t = t.getSeconds();
-		  t %= 60;
-		  var angle = t*360/60;
-		  //if ticking over to 0 seconds, animate angle to 360 and then switch angle to 0
-		  if (angle === 0) angle = 360;
-		  seconds.animate(
-		    {transform: "rotate("+angle+" "+face.cx+" "+face.cy+")"},
-		    600,
-		    easing,
-		    function(){
-		      if (angle === 360){
-		        seconds.attr({transform: "rotate("+0+" "+face.cx+" "+face.cy+")"});
-		        sshadow.attr({transform: "translate(0, 2) rotate("+0+" "+face.cx+" "+face.cy+2+")"});
-		      }
-		    }
-		  );
-		  sshadow.animate(
-		    {transform: "translate(0, 2) rotate("+angle+" "+face.cx+" "+face.cy+2+")"},
-		    600,
-		    easing
-		  );
-		}
-		setInterval(update, 1000);
+  setCaptions();
+
+  setInterval(function() {
+    return setCaptions();
+  }, 10 * 1000);
+
+  $(function() {
+    TweenMax.staggerFrom(".clockArc", .5, {
+      drawSVG: 0,
+      ease: Power3.easeOut
+    }, 0.3);
+    TweenMax.from("#time", 1.0, {
+      attr: {
+        y: 350
+      },
+      opacity: 0,
+      ease: Power3.easeOut,
+      delay: 0.5
+    });
+    TweenMax.from(".dayText", 1.0, {
+      attr: {
+        y: 310
+      },
+      opacity: 0,
+      delay: 1.0,
+      ease: Power3.easeOut
+    });
+    return TweenMax.from(".dateText", 1.0, {
+      attr: {
+        y: 350
+      },
+      opacity: 0,
+      delay: 1.5,
+      ease: Power3.easeOut
+    });
+  });
+
+}).call(this);
